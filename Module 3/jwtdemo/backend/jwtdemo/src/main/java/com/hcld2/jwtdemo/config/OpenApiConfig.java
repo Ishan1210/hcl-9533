@@ -1,4 +1,4 @@
-package com.hcld2.jwtdemo.config;
+ package com.hcld2.jwtdemo.config;
 
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
