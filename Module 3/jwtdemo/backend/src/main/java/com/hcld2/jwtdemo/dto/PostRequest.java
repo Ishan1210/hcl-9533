@@ -3,5 +3,5 @@ package com.hcld2.jwtdemo.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record PostRequest(@NotBlank @Size(max = 200) String title, @NotBlank @Size(max = 2000) String content) {
+public record PostRequest(@NotBlank @Size(max = 200) String title, @NotBlank String content) {
 }

@@ -16,7 +16,7 @@ const AuthForm = ({ onLogin }) => {
       };
     }
     try {
-      if (mode === "register") {
+      if (mode == "register") {
         await api.post("/auth/register", { username, password });
         setMode("login");
         return {
@@ -39,7 +39,7 @@ const AuthForm = ({ onLogin }) => {
       return {
         error:
           error.response?.data?.error ||
-          error.response?.data?.message ||
+          error.response?.dta?.message ||
           "Something went wrong. Please try again.",
         msg: "",
         username,

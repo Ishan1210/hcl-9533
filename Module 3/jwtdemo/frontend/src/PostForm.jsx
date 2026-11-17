@@ -28,7 +28,7 @@ const PostForm = ({ onCreated }) => {
       return {
         error:
           error.response?.data?.error ||
-          error.response?.data?.message ||
+          error.response?.dta?.message ||
           "failed to create post. Please try again.",
         msg: "",
         title,
