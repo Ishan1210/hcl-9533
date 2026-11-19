@@ -1,5 +1,7 @@
-export const greet = (name)=>{
-    return `Hello ${name}`;
-}
+export const greet = (name) => {
+  return `Hello, ${name}!`;
+};
 
-export const greetiInHindi
+export const greetInHindi = (name) => {
+  return `Namaste, ${name}!`;
+};

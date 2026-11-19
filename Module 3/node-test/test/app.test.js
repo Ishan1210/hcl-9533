@@ -1,10 +1,18 @@
-import {greet} from '../app.js';
-import {test} from 'node:test';
-import assert from 'node:assert';
+import { greet, greetInHindi } from "../app.js";
+import { describe, test } from "node:test";
+import assert from "node:assert";
 
-test('greet function should return a greeting message', () => {
-    const expected='Hello World';
+describe("Greeting functions", () => {
+  test("greet returns the correct greeting", () => {
+    const expected = `Hello, World!`;
     const actual = greet("World");
 
-    assert.strictEqual(actual,expected);
-})
+    assert.strictEqual(actual, expected);
+  });
+
+  test("greet returns in hindi", () => {
+    const expected = `Namaste, Duniya!`;
+    const actual = greetInHindi("Duniya");
+    assert.strictEqual(actual, expected);
+  });
+});
