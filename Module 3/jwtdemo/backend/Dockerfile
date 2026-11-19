@@ -1,14 +1,28 @@
-# ---------- Build State ---------
-FROM maven:3.9-eclipse-temurin-25
+
+# ---------- Build Stage ----------
+FROM maven:3.9-eclipse-temurin-21 AS build
+
 WORKDIR /app
-COPY pom.xml .
+
+# Copy the actual Spring Boot project pom.xml
+COPY jwtdemo/pom.xml .
+
+# Download dependencies
 RUN mvn dependency:go-offline -B
-COPY src ./src
+
+# Copy Java source code
+COPY jwtdemo/src ./src
+
+# Build application
 RUN mvn clean package -DskipTests -B
 
-# ----- Run Stage ---------------
-FROM eclipse-temurin:25-jre
+# ---------- Runtime Stage ----------
+FROM eclipse-temurin:21-jre
+
 WORKDIR /app
+
 COPY --from=build /app/target/*.jar app.jar
+
 EXPOSE 8080
-ENTRYPOINT [ "java","-jar","app.jar" ]
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

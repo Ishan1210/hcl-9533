@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "./api";
 import AuthForm from "./AuthForm";
 import PostForm from "./PostForm";
@@ -6,36 +6,15 @@ import PostForm from "./PostForm";
 const App = () => {
   const [user, setUser] = useState(localStorage.getItem("username"));
   const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
 
-  const loadPosts = useCallback(async () => {
-    setLoading(true);
-    setLoadError("");
-    try {
-      const { data } = await api.get("/posts");
-      if (!Array.isArray(data)) {
-        throw new Error("The posts endpoint did not return a JSON array.");
-      }
-      setPosts(data);
-    } catch (error) {
-      console.error("Unable to load posts:", error);
-      setLoadError(
-        error.response
-          ? `Could not load posts (HTTP ${error.response.status}). Check the backend response.`
-          : error.message === "Network Error"
-            ? "Cannot reach the API. Check that Spring Boot is running and CORS allows http://localhost:5173."
-            : error.message || "Unable to load posts."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  const loadPosts = async () => {
+    const { data } = await api.get("/posts");
+    setPosts(data);
+  };
   useEffect(() => {
     loadPosts();
-  }, [loadPosts]);
-
+    console.log(posts);
+  }, []);
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("username");
@@ -43,47 +22,97 @@ const App = () => {
   };
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="/">JWT <span>Blog</span></a>
-        <div className="topbar-actions">
-          {user ? <><span className="user-label">Signed in as <strong>{user}</strong></span><button className="button button-ghost" onClick={logout}>Logout</button></> : <span className="topbar-note">A simple place for your thoughts</span>}
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            JWT Blog Demo
+          </h1>
+
+          {user && (
+            <button
+              onClick={logout}
+              className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </header>
 
-      <section className="hero">
-        <p className="eyebrow">WRITE · SHARE · CONNECT</p>
-        <h1>Ideas worth <span>sharing.</span></h1>
-        <p className="hero-copy">Publish your thoughts and discover what others are writing.</p>
-      </section>
+      {/* Main Content Area */}
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+        {/* Authentication and Post Form */}
+        <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          {user ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+                <span className="text-sm font-medium text-slate-600">
+                  Logged in as{" "}
+                  <strong className="text-slate-900 font-semibold">
+                    {user}
+                  </strong>
+                </span>
+              </div>
 
-      <div className="content-grid">
-        <section className="panel auth-panel">
-          {user ? <>
-            <div className="section-heading"><p className="eyebrow">YOUR SPACE</p><h2>Create a post</h2></div>
-            <PostForm onCreated={loadPosts} />
-          </> : <>
-            <div className="section-heading"><p className="eyebrow">GET STARTED</p><h2>Join the conversation</h2></div>
+              <PostForm onCreated={loadPosts} />
+            </div>
+          ) : (
             <AuthForm onLogin={setUser} />
-          </>}
+          )}
         </section>
 
-        <section className="posts-section">
-          <div className="posts-heading"><div><p className="eyebrow">THE COMMUNITY</p><h2>Latest posts</h2></div><span className="post-count">{posts.length} {posts.length === 1 ? "POST" : "POSTS"}</span></div>
-          {loading && <p className="notice">Loading posts…</p>}
-          {!loading && loadError && <div className="error-box" role="alert"><p>{loadError}</p><button className="button button-small" onClick={loadPosts}>Try again</button></div>}
-          {!loading && !loadError && posts.length === 0 && <div className="empty-state"><span className="empty-icon">✎</span><h3>Nothing here yet</h3><p>Be the first to publish something worth reading.</p></div>}
-          <div className="post-list">
-            {posts.map((post) => <article className="post-card" key={post.id}>
-              <h3>{post.title}</h3><p className="post-content">{post.content}</p>
-              <div className="post-meta"><span>By <strong>{post.author}</strong></span><time dateTime={post.createdAt}>{post.createdAt ? new Date(post.createdAt).toLocaleString() : ""}</time></div>
-            </article>)}
+        {/* All Posts Section */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">All Posts</h2>
+
+            <span className="text-xs font-semibold uppercase tracking-wider bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full">
+              {posts.length} {posts.length === 1 ? "Post" : "Posts"}
+            </span>
+          </div>
+
+          {posts.length === 0 && (
+            <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+              <p className="text-slate-500 text-sm">
+                No posts yet. Be the first to publish one!
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {posts.map((p) => (
+              <article
+                key={p.id}
+                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow space-y-3"
+              >
+                <h2 className="text-xl font-semibold text-slate-900">
+                  {p.title}
+                </h2>
+
+                <p className="text-slate-600 leading-relaxed text-sm sm:text-base">
+                  {p.content}
+                </p>
+
+                <div className="flex flex-wrap items-center justify-between pt-4 border-t border-slate-100 text-xs text-slate-500">
+                  <span className="font-medium text-slate-700">
+                    By{" "}
+                    <span className="text-indigo-600 font-semibold">
+                      {p.author}
+                    </span>
+                  </span>
+
+                  <time dateTime={p.createdAt} className="text-slate-400">
+                    {new Date(p.createdAt).toLocaleString()}
+                  </time>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
-      </div>
-      <footer className="footer">JWT Blog Demo <span>·</span> Built with React & Spring Boot</footer>
-    </main>
+      </main>
+    </div>
   );
 };
-
 export default App;
