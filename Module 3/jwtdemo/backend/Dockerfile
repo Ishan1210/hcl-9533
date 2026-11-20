@@ -1,23 +1,14 @@
-
-# ---------- Build Stage ----------
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
 
 WORKDIR /app
 
-# Copy the actual Spring Boot project pom.xml
 COPY jwtdemo/pom.xml .
-
-# Download dependencies
 RUN mvn dependency:go-offline -B
 
-# Copy Java source code
 COPY jwtdemo/src ./src
-
-# Build application
 RUN mvn clean package -DskipTests -B
 
-# ---------- Runtime Stage ----------
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
