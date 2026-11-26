@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './styles.css';
 import { Layout, Heading, Empty } from './components';
+import { AuthProvider, RequireAuth } from './auth';
+import { AccountForm } from './account';
 
 function Browse() {
   return <><Heading title="Browse items" description="Find items to borrow or rent in your neighbourhood."/>
@@ -16,10 +18,10 @@ function PendingPage({ title, description }) {
 function App() {
   return <Layout><Routes>
     <Route path="/" element={<Browse/>}/>
-    <Route path="/login" element={<PendingPage title="Sign in" description="Account access will be implemented in the next milestone."/>}/>
-    <Route path="/register" element={<PendingPage title="Create account" description="Registration will be implemented in the next milestone."/>}/>
-    <Route path="/items/new" element={<PendingPage title="List an item" description="Listing creation will be implemented in a later milestone."/>}/>
+    <Route path="/login" element={<AccountForm key="login"/>}/>
+    <Route path="/register" element={<AccountForm key="register" register/>}/>
+    <Route path="/items/new" element={<RequireAuth><PendingPage title="List an item" description="Listing creation will be implemented in a later milestone."/></RequireAuth>}/>
     <Route path="*" element={<Empty title="Page not found" description="This page does not exist." action={<Link to="/" className="btn btn-primary">Browse items</Link>}/>}/>
   </Routes></Layout>;
 }
-createRoot(document.getElementById('root')).render(<BrowserRouter><App/></BrowserRouter>);
+createRoot(document.getElementById('root')).render(<BrowserRouter><AuthProvider><App/></AuthProvider></BrowserRouter>);

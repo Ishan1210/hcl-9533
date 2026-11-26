@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useAuth } from './auth';
 
 export function Layout({ children }) {
+  const { user, logout } = useAuth();
   return <>
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="site-header"><div className="shell header-inner">
@@ -10,7 +12,7 @@ export function Layout({ children }) {
         <NavLink to="/" end>Browse items</NavLink>
         
       </nav>
-      <div className="account-nav"><Link to="/items/new" className="btn btn-primary btn-sm">List an item</Link><Link to="/login" className="account-link">Sign in</Link></div>
+      <div className="account-nav"><Link to="/items/new" className="btn btn-primary btn-sm">List an item</Link>{user ? <><span className="account-link">{user.name}</span><button className="plain-button" onClick={logout}>Sign out</button></> : <Link to="/login" className="account-link">Sign in</Link>}</div>
     </div></header>
     <main id="main" className="shell main-content" tabIndex={-1}>{children}</main>
     <footer className="site-footer"><div className="shell footer-inner"><span>BorrowBuddy</span><span>Community item lending and rentals</span></div></footer>
@@ -22,3 +24,5 @@ export function Heading({ title, description, action }) {
 export function ErrorMessage({ message }) { return message ? <div role="alert" className="notice notice-error">{message}</div> : null; }
 export function Loading() { return <p role="status" className="state-text">Loading…</p>; }
 export function Empty({ title, description, action }) { return <div className="empty-state"><h2>{title}</h2><p>{description}</p>{action}</div>; }
+
+export function Field({ label, id, hint, children }) { return <div className="form-field"><label htmlFor={id}>{label}</label>{children}{hint && <div id={`${id}-hint`} className="field-hint">{hint}</div>}</div>; }
