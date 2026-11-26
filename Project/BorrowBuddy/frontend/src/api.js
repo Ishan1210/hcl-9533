@@ -24,3 +24,16 @@ export async function api(path, { token, method = 'GET', body, signal } = {}) {
   return data;
 }
 
+
+export const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Number(value));
+export const rate = value => Number(value) === 0 ? 'Free' : `${money(value)}/day`;
+export function getLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('Location is not supported by this browser.'));
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => resolve({ latitude: Number(coords.latitude.toFixed(3)), longitude: Number(coords.longitude.toFixed(3)) }),
+      () => reject(new Error('Location unavailable. Allow browser location access, or enter coordinates manually.')),
+      { timeout: 12000, maximumAge: 60000 }
+    );
+  });
+}

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { rate } from './api';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from './auth';
 
@@ -26,3 +27,15 @@ export function Loading() { return <p role="status" className="state-text">Loadi
 export function Empty({ title, description, action }) { return <div className="empty-state"><h2>{title}</h2><p>{description}</p>{action}</div>; }
 
 export function Field({ label, id, hint, children }) { return <div className="form-field"><label htmlFor={id}>{label}</label>{children}{hint && <div id={`${id}-hint`} className="field-hint">{hint}</div>}</div>; }
+
+export function ItemPhoto({ item, large = false }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [item.imageUrl]);
+  const valid = /^https?:\/\//i.test(item.imageUrl || '');
+  return <div className={`item-photo ${large ? 'photo-large' : ''}`}>
+    {valid && !failed ? <img src={item.imageUrl} alt={item.name} loading="lazy" onError={() => setFailed(true)} referrerPolicy="no-referrer"/> : <div className="photo-placeholder"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m4 18 5-5 3 3 4-5 4 5"/></svg><span>No photo</span></div>}
+  </div>;
+}
+export function ItemCard({ item }) {
+  return <article className="listing"><Link to={`/items/${item.id}`} className="listing-link"><ItemPhoto item={item}/><div className="listing-body"><div className="listing-meta">{item.categoryName}</div><h2>{item.name}</h2><p className="location-text">{item.locality}{item.distanceKm != null && ` · ${item.distanceKm.toFixed(1)} km away`}</p><div className="listing-price">{rate(item.pricePerDay)}</div></div></Link></article>;
+}
