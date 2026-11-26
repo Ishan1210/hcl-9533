@@ -3,6 +3,7 @@ import com.borrowbuddy.dto.request.ItemRequest;
 import com.borrowbuddy.dto.response.ItemResponse;
 import com.borrowbuddy.entity.*;
 import com.borrowbuddy.enums.ItemStatus;
+import com.borrowbuddy.enums.BorrowStatus;
 import com.borrowbuddy.repository.*;
 import com.borrowbuddy.util.DistanceUtil;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,8 @@ import java.util.*;
  private final ItemRepository itemRepository;
  private final CategoryRepository categoryRepository;
  private final UserRepository userRepository;
- public ItemService(ItemRepository itemRepository,CategoryRepository categoryRepository,UserRepository userRepository){this.itemRepository=itemRepository;this.categoryRepository=categoryRepository;this.userRepository=userRepository;}
+ private final BorrowRequestRepository borrowRequests;
+ public ItemService(ItemRepository itemRepository,CategoryRepository categoryRepository,UserRepository userRepository,BorrowRequestRepository borrowRequests){this.borrowRequests=borrowRequests;this.itemRepository=itemRepository;this.categoryRepository=categoryRepository;this.userRepository=userRepository;}
  private User getUser(String email){return userRepository.findByEmail(email).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"User not found"));}
  private Item getOwnedItem(Long id,String email){
  Item item=itemRepository.findByIdForUpdate(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Item not found"));
@@ -44,7 +46,12 @@ import java.util.*;
  if(locationSearch) result.sort(Comparator.comparing(ItemResponse::getDistanceKm));else result.sort(Comparator.comparing(ItemResponse::getCreatedAt).reversed());return result;
  }
  @Transactional(readOnly=true) public List<ItemResponse> getMyItems(String email){return itemRepository.findByOwnerIdAndStatusNot(getUser(email).getId(),ItemStatus.ARCHIVED).stream().map(item->new ItemResponse(item,null)).toList();}
- public ItemResponse updateItem(Long id,ItemRequest request,String email){Item item=getOwnedItem(id,email);setItemDetails(item,request);return new ItemResponse(itemRepository.save(item),null);}
- public ItemResponse updateStatus(Long id,ItemStatus status,String email){Item item=getOwnedItem(id,email);if(status==null||status==ItemStatus.ARCHIVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Status must be ACTIVE or INACTIVE");item.setStatus(status);return new ItemResponse(itemRepository.save(item),null);}
- public void deleteItem(Long id,String email){Item item=getOwnedItem(id,email);item.setStatus(ItemStatus.ARCHIVED);itemRepository.save(item);}
+ private void ensureNoReservations(Item item){
+ for(BorrowRequest r:borrowRequests.findForUpdate(item.getId())){
+ if(r.getStatus()==BorrowStatus.APPROVED||r.getStatus()==BorrowStatus.BORROWED||r.getStatus()==BorrowStatus.RETURN_REQUESTED) throw new ResponseStatusException(HttpStatus.CONFLICT,"Item has an approved reservation or active loan");
+ }
+ }
+ public ItemResponse updateItem(Long id,ItemRequest request,String email){Item item=getOwnedItem(id,email);ensureNoReservations(item);setItemDetails(item,request);return new ItemResponse(itemRepository.save(item),null);}
+ public ItemResponse updateStatus(Long id,ItemStatus status,String email){Item item=getOwnedItem(id,email);if(status==null||status==ItemStatus.ARCHIVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Status must be ACTIVE or INACTIVE");if(status==ItemStatus.INACTIVE) ensureNoReservations(item);item.setStatus(status);return new ItemResponse(itemRepository.save(item),null);}
+ public void deleteItem(Long id,String email){Item item=getOwnedItem(id,email);ensureNoReservations(item);for(BorrowRequest r:borrowRequests.findForUpdate(id)){if(r.getStatus()==BorrowStatus.PENDING) r.setStatus(BorrowStatus.CANCELLED);}item.setStatus(ItemStatus.ARCHIVED);itemRepository.save(item);}
 }
