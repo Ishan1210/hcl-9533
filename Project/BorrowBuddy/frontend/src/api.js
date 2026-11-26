@@ -25,8 +25,22 @@ export async function api(path, { token, method = 'GET', body, signal } = {}) {
 }
 
 
+export function localDate() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const value = type => parts.find(part => part.type === type).value;
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+export function addDays(date, count) {
+  const d = new Date(date + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + count);
+  return d.toISOString().slice(0, 10);
+}
+export function rentalDays(start, end) {
+  return Math.round((Date.parse(end) - Date.parse(start)) / 86400000) + 1;
+}
 export const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Number(value));
 export const rate = value => Number(value) === 0 ? 'Free' : `${money(value)}/day`;
+export const dateLabel = date => new Date(date + 'T00:00:00Z').toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'});
 export function getLocation() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('Location is not supported by this browser.'));

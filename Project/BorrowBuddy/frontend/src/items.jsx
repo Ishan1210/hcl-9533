@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
-import { api, getLocation, rate } from './api';
+import { api, addDays, getLocation, localDate, money, rate, rentalDays } from './api';
 import { Empty, ErrorMessage, Field, Heading, ItemCard, ItemPhoto, Loading } from './components';
 
 // Reloads when the URL or token changes. Abort stale requests when navigating.
@@ -82,13 +82,33 @@ export function Browse() {
 
 export function ItemDetail() {
   const { id } = useParams();
+  const { user, token } = useAuth();
   const { data: item, loading, error, reload } = useData('/items/' + id);
+  const [start, setStart] = useState(localDate());
+  const [end, setEnd] = useState(localDate());
+  const [sending, setSending] = useState(false);
+  const [failure, setFailure] = useState('');
+  const navigate = useNavigate();
+  const today = localDate(), days = rentalDays(start, end);
+  const valid = start >= today && start <= addDays(today, 90) && days >= 1 && days <= 30;
+  async function request(e) {
+    e.preventDefault(); if (!valid || sending) return;
+    setSending(true); setFailure('');
+    try { await api('/borrow-requests', { token, method: 'POST', body: { itemId: Number(id), startDate: start, endDate: end } }); navigate('/activity', { state: { message: 'Request sent to the item owner.' } }); }
+    catch (e) { setFailure(e.message); } finally { setSending(false); }
+  }
   if (loading) return <Loading/>;
   if (!item) return <><ErrorMessage message={error}/><Link to="/" className="btn btn-outline-primary">Browse items</Link><button className="btn btn-link" onClick={reload}>Try again</button></>;
+  const owned = user?.id === item.ownerId;
   return <><Link to="/" className="back-link">← Browse items</Link><div className="detail-layout">
-    <section><p className="eyebrow">{item.categoryName}</p><h1>{item.name}</h1><p className="muted">{item.locality}</p><ItemPhoto item={item} large/><div className="detail-section"><h2>About this item</h2><p className="description">{item.description}</p></div><div className="detail-section"><h2>Listed by</h2><p>{item.ownerName}</p><p className="muted small">Exact pickup coordinates are not public.</p></div></section>
-    <aside className="booking-panel"><div className="booking-price">{rate(item.pricePerDay)}</div><p className="muted">Borrowing requests will be enabled in a later milestone.</p><Link to="/" className="btn btn-outline-primary w-100">Browse more items</Link></aside>
-  </div></>;
+    <section><p className="eyebrow">{item.categoryName}</p><h1>{item.name}</h1><p className="muted">{item.locality}</p><ItemPhoto item={item} large/><div className="detail-section"><h2>About this item</h2><p className="description">{item.description}</p></div><div className="detail-section"><h2>Listed by</h2><p>{item.ownerName}</p><p className="muted small">Pickup arrangements are agreed with the owner. Exact coordinates are not public.</p></div></section>
+    <aside className="booking-panel"><div className="booking-price">{rate(item.pricePerDay)}</div>{owned ? <><p>This is your listing.</p><Link className="btn btn-primary w-100" to={`/items/${id}/edit`}>Edit listing</Link></> : <form onSubmit={request}><h2>Request this item</h2>
+      <Field id="start" label="Start date"><input className="form-control" id="start" type="date" min={today} max={addDays(today,90)} required value={start} onChange={e => { setStart(e.target.value); if (end < e.target.value) setEnd(e.target.value); }}/></Field>
+      <Field id="end" label="Return date"><input className="form-control" id="end" type="date" min={start} max={start ? addDays(start,29) : undefined} required value={end} onChange={e => setEnd(e.target.value)}/></Field>
+      {valid && <div className="cost-summary"><div><span>{days} {days === 1 ? 'day' : 'days'} × {money(item.pricePerDay)}</span><span>{money(days * item.pricePerDay)}</span></div><div className="total"><strong>Total rental cost</strong><strong>{money(days * item.pricePerDay)}</strong></div></div>}
+      <p className="field-hint">Dates include both start and return days. Availability is checked when you request and the owner approves. Payment is arranged offline.</p><ErrorMessage message={failure}/>
+      {user ? <button className="btn btn-primary w-100" disabled={!valid || sending}>{sending ? 'Sending…' : 'Send borrowing request'}</button> : <Link className="btn btn-primary w-100" to="/login" state={{ from: `/items/${id}` }}>Sign in to request</Link>}
+    </form>}</aside></div></>;
 }
 
 const emptyForm = { name: '', description: '', categoryId: '', pricePerDay: '0', locality: '', latitude: '', longitude: '', imageUrl: '' };
