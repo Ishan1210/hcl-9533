@@ -11,10 +11,10 @@ export function Layout({ children }) {
       <Link to="/" className="brand"><svg width="32" height="32" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="7" fill="#305d47"/><path d="M9 15 L20 8 L31 15 V28 L20 34 L9 28 Z M9 15 L20 21 L31 15 M20 21 V34 M14 12 L25 18" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinejoin="round"/></svg><span>BorrowBuddy</span></Link>
       <nav aria-label="Main navigation" className="main-nav">
         <NavLink to="/" end>Browse items</NavLink>
-        {user && <><NavLink to="/activity">My activity</NavLink><NavLink to="/my-items">My listings</NavLink></>}
+        {user && <><NavLink to="/dashboard">Dashboard</NavLink><NavLink to="/activity">My activity</NavLink><NavLink to="/my-items">My listings</NavLink></>}
         
       </nav>
-      <div className="account-nav"><Link to="/items/new" className="btn btn-primary btn-sm">List an item</Link>{user ? <><span className="account-link">{user.name}</span><button className="plain-button" onClick={logout}>Sign out</button></> : <Link to="/login" className="account-link">Sign in</Link>}</div>
+      <div className="account-nav"><Link to="/items/new" className="btn btn-primary btn-sm">List an item</Link>{user ? <><Link to="/profile" className="account-link">{user.name}</Link><button className="plain-button" onClick={logout}>Sign out</button></> : <Link to="/login" className="account-link">Sign in</Link>}</div>
     </div></header>
     <main id="main" className="shell main-content" tabIndex={-1}>{children}</main>
     <footer className="site-footer"><div className="shell footer-inner"><span>BorrowBuddy</span><span>Community item lending and rentals</span></div></footer>

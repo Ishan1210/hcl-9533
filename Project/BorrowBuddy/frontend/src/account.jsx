@@ -31,6 +31,19 @@ export function AccountForm({ register = false }) {
   </form></div>;
 }
 
+export function Profile() {
+  const { token, user, updateUser } = useAuth();
+  const profile = useData('/users/me', token);
+  const [name, setName] = useState(user?.name || ''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
+  useEffect(() => { if (profile.data) setName(profile.data.name); }, [profile.data]);
+  async function save(e) {
+    e.preventDefault(); if (!name.trim() || busy) return; setBusy(true); setNotice(''); setError('');
+    try { const updated = await api('/users/me', { method: 'PUT', token, body: { name: name.trim() } }); updateUser(updated); setNotice('Profile updated.'); }
+    catch(e) { setError(e.message); } finally { setBusy(false); }
+  }
+  return <div className="form-page"><Heading title="Your profile" description="Manage how your name appears to other community members."/><ErrorMessage message={profile.error}/>{profile.loading ? <Loading/> : profile.data ? <form onSubmit={save} className="form-section"><Field id="displayName" label="Full name"><input id="displayName" className="form-control" value={name} maxLength={100} onChange={e => setName(e.target.value)} required/></Field><Field id="accountEmail" label="Email address" hint="Your sign-in email cannot be changed."><input id="accountEmail" type="email" className="form-control" value={profile.data.email} readOnly aria-describedby="accountEmail-hint"/></Field><ErrorMessage message={error}/>{notice && <p role="status" className="notice notice-success">{notice}</p>}<button className="btn btn-primary" disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save profile'}</button></form> : <button className="btn btn-outline-primary" onClick={profile.reload}>Try again</button>}</div>;
+}
+
 const statuses = { PENDING: 'Awaiting approval', APPROVED: 'Approved', REJECTED: 'Declined', CANCELLED: 'Cancelled', BORROWED: 'On loan', RETURN_REQUESTED: 'Return requested', COMPLETED: 'Returned' };
 const actionLabels = { approve: 'Approve', reject: 'Decline', cancel: 'Cancel request', handover: 'Confirm handover', 'request-return': 'Request return', 'confirm-return': 'Confirm return' };
 const openStatuses = ['PENDING', 'APPROVED', 'BORROWED', 'RETURN_REQUESTED'];
@@ -44,19 +57,18 @@ function availableActions(request, lending) {
   return [];
 }
 export function Activity() {
-  const { token } = useAuth(); const borrowing = useData('/borrow-requests/my', token); const incoming = useData('/borrow-requests/incoming', token);
+  const { token } = useAuth(); const dashboard = useData('/dashboard', token);
   const [params, setParams] = useSearchParams(); const lending = params.get('view') === 'lending';
   const location = useLocation();
   const [filter, setFilter] = useState('open'), [busy, setBusy] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(location.state?.message || '');
-  const dashboard = lending ? incoming : borrowing;
-  const records = dashboard.data || [];
+  const records = dashboard.data?.[lending ? 'lending' : 'borrowing'] || [];
   const visible = records.filter(r => filter === 'all' || (filter === 'open' ? openStatuses.includes(r.status) : !openStatuses.includes(r.status)));
-  const pending = incoming.data?.filter(r => r.status === 'PENDING' || r.status === 'RETURN_REQUESTED').length || 0;
+  const pending = dashboard.data?.lending?.filter(r => r.status === 'PENDING' || r.status === 'RETURN_REQUESTED').length || 0;
   async function action(r, name) {
     if (busy) return;
     if (['reject','cancel','handover','confirm-return'].includes(name) && !window.confirm(`${actionLabels[name]} for ${r.itemName}?`)) return;
     setBusy(r.id); setError(''); setNotice('');
-    try { const updated = await api(`/borrow-requests/${r.id}/${name}`, { token, method: 'PATCH' }); setNotice(`${updated.itemName}: ${statuses[updated.status]}.`); borrowing.reload(); incoming.reload(); }
+    try { const updated = await api(`/borrow-requests/${r.id}/${name}`, { token, method: 'PATCH' }); setNotice(`${updated.itemName}: ${statuses[updated.status]}.`); dashboard.reload(); }
     catch(e) { setError(e.message); } finally { setBusy(null); }
   }
   return <><Heading title="My activity" description="Track your requests, handovers and returns." action={<Link to="/my-items" className="btn btn-outline-primary">My listings</Link>}/>
@@ -65,4 +77,22 @@ export function Activity() {
     <ErrorMessage message={dashboard.error || error}/>{notice && <div role="status" className="notice notice-success">{notice}</div>}
     {dashboard.error && <button className="btn btn-outline-primary" onClick={dashboard.reload}>Try again</button>}
     {dashboard.loading ? <Loading/> : visible.length ? <div className="request-list">{visible.map(r => <article key={r.id} className="request-row"><div className="request-info"><h3>{r.itemName}</h3><p className="muted">{lending ? `Requested by ${r.borrowerName}` : `Owner: ${r.ownerName}`}</p><p className="request-dates">{dateLabel(r.startDate)} – {dateLabel(r.endDate)}</p><p className="muted small">Request #{r.id}</p></div><div className="request-value"><span className={`status-text ${r.overdue ? 'danger' : ['APPROVED','COMPLETED'].includes(r.status) ? 'positive' : r.status === 'PENDING' || r.status === 'RETURN_REQUESTED' ? 'attention' : ''}`}>{r.overdue ? 'Overdue · ' : ''}{statuses[r.status] || r.status}</span><strong>{money(r.totalPrice)}</strong><span className="muted small">Rental total · offline payment</span></div><div className="request-actions">{availableActions(r,lending).map((name,i) => <button key={name} disabled={busy !== null} className={`btn btn-sm ${i === 0 && !['reject','cancel'].includes(name) ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => action(r,name)}>{busy === r.id ? 'Updating…' : actionLabels[name]}</button>)}{r.status === 'APPROVED' && lending && r.startDate > localDate() && <span className="muted small">Handover opens on {dateLabel(r.startDate)}.</span>}</div></article>)}</div> : !dashboard.error && <Empty title={filter === 'open' ? 'No open requests' : 'No requests to show'} description={lending ? 'Requests from borrowers will appear here.' : 'Choose an item and send a borrowing request.'} action={!lending ? <Link to="/" className="btn btn-outline-primary">Browse items</Link> : <Link to="/my-items" className="btn btn-outline-primary">View my listings</Link>}/>}</>;
+}
+
+export function Dashboard() {
+  const { token } = useAuth();
+  const dashboard = useData('/dashboard', token);
+  const data = dashboard.data;
+  const items = data?.myItems ?? data?.items ?? [];
+  const borrowing = data?.borrowing ?? [];
+  const lending = data?.lending ?? [];
+  const sections = [
+    { title: 'My listings', count: items.length, detail: `${items.filter(i => i.status === 'ACTIVE').length} active`, to: '/my-items' },
+    { title: 'Borrowing', count: borrowing.filter(r => openStatuses.includes(r.status)).length, detail: 'Open requests', to: '/activity' },
+    { title: 'Lending', count: lending.filter(r => openStatuses.includes(r.status)).length, detail: `${lending.filter(r => ['PENDING', 'RETURN_REQUESTED'].includes(r.status)).length} to review`, to: '/activity?view=lending' }
+  ];
+  return <><Heading title="Your dashboard" description="Manage your listings and requests in one place." action={<Link to="/profile" className="btn btn-outline-primary">Edit profile</Link>}/>
+    <ErrorMessage message={dashboard.error}/>{dashboard.error && <button className="btn btn-outline-primary" onClick={dashboard.reload}>Try again</button>}
+    {dashboard.loading ? <Loading/> : data && <><div className="dashboard-summary">{sections.map(s => <Link key={s.title} to={s.to} className="dashboard-summary-link"><h2>{s.title}</h2><strong>{s.count}</strong><span className="muted">{s.detail}</span><span className="dashboard-link-label">View {s.title.toLowerCase()} →</span></Link>)}</div><div className="dashboard-next"><h2>Requests needing your attention</h2>{lending.filter(r => ['PENDING','RETURN_REQUESTED'].includes(r.status)).length ? <div className="dashboard-requests">{lending.filter(r => ['PENDING','RETURN_REQUESTED'].includes(r.status)).map(r => <div key={r.id}><span><strong>{r.itemName}</strong><span className="muted d-block">{r.borrowerName} · {statuses[r.status]}</span></span><Link to="/activity?view=lending" className="btn btn-outline-primary btn-sm">Review</Link></div>)}</div> : <Empty title="Nothing to review" description="New borrowing and return requests will appear here."/>}</div></>}
+  </>;
 }
