@@ -8,6 +8,7 @@ public class BorrowbuddyApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(BorrowbuddyApplication.class, args);
+		System.out.println("Welcome to BorrowBuddy");
 	}
 
 }
